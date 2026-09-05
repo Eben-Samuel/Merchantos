@@ -1,5 +1,4 @@
-# MERCHANTOS AI — AI-Powered Commerce Assistant
-
+# MERCHANTOS AI
 An AI-native shopping assistant with **Razorpay payment integration**, built as a multi-agent system: an AI agent searches the catalog, recommends products, applies upsell/cross-sell suggestions, enforces merchant policies, and completes payments — with **every AI decision logged to an audit trail**.
 
 ## Architecture
