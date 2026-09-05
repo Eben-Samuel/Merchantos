@@ -1,58 +1,95 @@
-# Merchantos
-**Crisp:**
-MerchantOS AI is an AI-powered digital salesman that understands customer intent, recommends products, accessories, upsells and bundles, and helps merchants increase conversions, Average Order Value (AOV), and revenue through intelligent, personalized AI-driven commerce. It turns conversations into measurable revenue opportunities online.
+# MERCHANTOS AI — AI-Powered Commerce Assistant
 
+An AI-native shopping assistant with **Razorpay payment integration**, built as a multi-agent system: an AI agent searches the catalog, recommends products, applies upsell/cross-sell suggestions, enforces merchant policies, and completes payments — with **every AI decision logged to an audit trail**.
 
-**MerchantOS AI is an AI-powered commerce platform that transforms traditional online shopping into an intelligent, revenue-driven experience.**
+## Architecture
 
-Unlike conventional e-commerce chatbots that simply answer customer questions, MerchantOS AI acts as an **AI-powered digital salesman**. It understands customer intent, helps buyers discover the right products, provides personalized recommendations, and intelligently suggests relevant **accessories, upsells, cross-sells, and product bundles** based on the customer's needs and current cart.
+```
+├── backend/          Express + TypeScript + SQLite
+│   └── src/
+│       ├── ai/               Agent layer
+│       │   ├── intentParser.ts        NL → structured intent (budget, category, use-cases)
+│       │   ├── catalogSearch.ts       Product search (word-level matching + fallback)
+│       │   ├── recommendationEngine.ts Scoring & ranking
+│       │   ├── recommendationHelper.ts Search → recommend → cart pipeline
+│       │   ├── revenueBrain.ts        Upsell / cross-sell / bundle detection
+│       │   ├── policyAgent.ts         GREEN/YELLOW/RED action guardrails
+│       │   ├── decisionLogger.ts      Audit trail + AI action history
+│       │   └── orchestrator.ts        Conversation state machine
+│       ├── services/         Razorpay orders, payment verification, order completion
+│       ├── routes/           REST API (chat, catalog, order, payment, analytics, demo…)
+│       └── config/           Env, SQLite database, schema
+├── frontend/         React 19 + Vite + Tailwind + Recharts
+│   └── src/components/
+│       ├── ChatInterface.tsx   Chat + approval buttons + Razorpay Checkout
+│       ├── AnalyticsDashboard.tsx  Revenue / funnel / AI metrics
+│       ├── OrderHistory.tsx    Orders with AI attribution
+│       └── HealthCheck.tsx     System status
+└── data/             SQLite database
+```
 
-For example, when a customer purchases a laptop for programming, MerchantOS AI can identify relevant complementary products such as a wireless mouse, laptop stand, USB-C hub, or external monitor, while explaining why each recommendation is useful. This creates additional value for the customer while helping merchants increase **Average Order Value (AOV), conversion, and revenue**.
+## Quick Start
 
-The platform combines **conversational AI, intelligent product recommendations, agentic commerce workflows, revenue analytics, abandoned-cart recovery, AI-driven revenue opportunities, merchant insights, payment integration, and auditable AI actions** into a unified commerce ecosystem.
+```bash
+# 1. Install dependencies
+cd backend  && npm install
+cd frontend && npm install
 
-### Key Capabilities
+# 2. Start the backend (port 4000)
+cd backend && npm run dev
 
-* 🤖 AI-powered conversational shopping assistant
-* 🎯 Customer-intent understanding and personalized recommendations
-* 🛒 Intelligent cart and shopping assistance
-* 📈 AI-driven upselling and cross-selling
-* 🎁 Smart product bundles
-* 🔗 Context-aware accessory recommendations
-* 💰 Revenue and Average Order Value optimization
-* 🔄 Abandoned-cart revenue recovery
-* 📊 AI Revenue Opportunity Radar
-* 🧠 Merchant AI Copilot
-* 🛍️ AI Buyer Simulator
-* 🛡️ AI Commerce Guard with controlled transaction policies
-* 💳 Razorpay Test Mode payment integration
-* 🔐 Secure payment verification and transaction handling
-* 📝 AI action audit trail
-* 📦 Inventory and order management
-* 📈 Merchant revenue analytics
-* 🌐 Multilingual commerce support
-* ⚡ Graceful AI and payment failure handling
+# 3. Start the frontend dev server (port 5173, proxies /api → 4000)
+cd frontend && npm run dev
+```
 
-### Core Vision
+Open **http://localhost:5173** — or run the production build and serve everything from one port:
 
-**MerchantOS AI aims to move e-commerce from simply displaying products to actively understanding customers and intelligently helping merchants sell more.**
+```bash
+cd frontend && npm run build   # outputs to backend/public
+# the backend then serves the app at http://localhost:4000
+```
 
-The core business loop is:
+## Payments — two modes
 
-**Customer Intent → AI Understanding → Product Discovery → Recommendation → Upsell/Cross-sell → Cart → Checkout → Payment → Order → Inventory → Analytics → Revenue Opportunity**
+| Mode | When | Behavior |
+|------|------|----------|
+| 🧪 **Demo** (default) | No `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` in `backend/.env` | Simulated gateway; HMAC signature verification works end-to-end; no real money |
+| 💳 **Live test** | Real Razorpay test keys in `.env` | Opens the real Razorpay Checkout window; server-side signature + payment fetch verification |
 
-MerchantOS AI is designed around a simple principle:
+## Example conversation
 
-> **Don't just help customers shop — help merchants sell more.**
+```
+You:  show me wireless earbuds under 6000
+AI:   I recommend **Pro Wireless Earbuds** for ₹5,499. ✓ Within budget ✓ In stock
+      Your final total is ₹5,499. I will not place the order until you approve the payment.
+You:  yes
+AI:   🔐 Payment gateway ready — total ₹5,499 (DEMO MODE)
+      → Checkout opens automatically → order created, inventory updated
+```
 
-### Technology
+Also try: `checkout`, `cancel`, `gift for my sister birthday under 3000`, `gaming laptop under 100000`.
 
-Built using modern web, AI, database, and payment technologies including:
+## Key API endpoints
 
-**React • TypeScript • Vite • Tailwind CSS • Node.js • Express • SQLite • OpenAI API • Razorpay Test Mode • Recharts**
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/chat/start` | New session |
+| POST | `/api/chat/message` | Send message `{session_id, message}` |
+| POST | `/api/chat/verify-payment` | Verify Razorpay signature & complete order |
+| GET  | `/api/chat/timeline/:sessionId` | Decision audit trail |
+| GET  | `/api/catalog/products?search=&maxPrice=` | Catalog search |
+| GET  | `/api/analytics` | Merchant dashboard metrics |
+| GET  | `/api/analytics/funnel` | Conversion funnel |
+| GET  | `/api/order` | Order history |
+| POST | `/api/demo/reset` | Reset & reseed demo data |
 
-The project follows a modular architecture where AI agents interact with controlled backend tools and business rules, ensuring that AI recommendations remain useful while sensitive commerce and payment actions are validated and authorized by the backend.
+## Safety model
 
-### Project Goal
+- **GREEN** — read-only actions (search, recommend, inventory): autonomous
+- **YELLOW** — discounts: require approval, capped by policy
+- **RED** — payments: never autonomous without explicit customer approval
+- All AI decisions → `audit_events`; AI reasoning → `ai_actions` (queryable via `/api/chat/history/:sessionId`)
 
-The goal of MerchantOS AI is to demonstrate how **AI can become an active revenue-generation layer for digital commerce**, rather than functioning as a basic customer-support chatbot.
+## Tech
+
+Express · TypeScript · SQLite (sqlite3) · Razorpay SDK · React 19 · Vite · Tailwind CSS · Recharts · Lucide
